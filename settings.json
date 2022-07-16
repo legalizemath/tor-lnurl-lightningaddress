@@ -1,3 +1,4 @@
 {
-  "controlPassword" : "password"
+  "controlPassword" : "password",
+  "hsPrivateKey": ""
 }
