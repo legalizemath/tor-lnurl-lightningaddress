@@ -1,0 +1,15 @@
+{
+  "name": "tortest",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "npm link balanceofsatoshis && node --optimize_for_size --max_old_space_size=300 server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.1"
+  },
+  "author": "",
+  "license": "MIT license"
+}
