@@ -15,7 +15,7 @@ const USER_NAME = 'btc' // give username to use for lnurl and lightning address
 const TEXT_MESSAGE = `Send sats. ${USER_NAME}` // text to show senders
 
 // how to access tor service controller and which port to use for new .onion
-const { controlPassword } = JSON.parse(fs.readFileSync('./settings.json'))
+const { controlPassword, hsPrivateKey } = JSON.parse(fs.readFileSync('./settings.json'))
 const ONION_CONTROL_ADDRESS = '0.0.0.0:39051' // your tor service control port
 const ONION_PORT = '80' // port for .onion:port address outsiders will use
 
@@ -32,7 +32,8 @@ const run = async () => {
     torControlAddress: ONION_CONTROL_ADDRESS,
     torControlPassword: controlPassword,
     portForOnion: ONION_PORT,
-    clearnetAddressAndPort: `${LOCAL_SERVER_ADDRESS}:${LOCAL_SERVER_PORT}`
+    clearnetAddressAndPort: `${LOCAL_SERVER_ADDRESS}:${LOCAL_SERVER_PORT}`,
+    hsPrivateKey // if this was available in settings.json, it will use it
   })
 
   const url_root = `${torRes.serviceId}.onion`
@@ -46,6 +47,19 @@ const run = async () => {
     lightningAddress: ${lightningAddress} (doesn't work anywhere yet) <br><br>
   `
   console.log(infoText)
+
+  // backup private key into settings.json so it's re-used next run
+  fs.writeFileSync(
+    './settings.json',
+    JSON.stringify(
+      {
+        controlPassword,
+        hsPrivateKey: torRes.hsPrivateKey
+      },
+      null,
+      2
+    )
+  )
 }
 
 // ---------- set up local webserver ----------
