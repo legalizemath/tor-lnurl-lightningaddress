@@ -1,1 +1,57 @@
-# tor-lnurl-lightningaddress
+```sh
+# install tor if not yet, tor --version
+
+    sudo apt install tor
+
+# generate password hash with: tor --hash-password "password"
+
+# password hash looks like 16:94D87DAEACD5274060844DAD7AAC00239BBA59C61455407034007C435F
+
+# edit tor settings file, replace mcedit w/ whatever editor
+
+    sudo mcedit /etc/tor/torrc # edit torrc file
+
+# add following lines
+
+# SocksPort 39050 # this is for browsing via tor as client
+
+# ControlPort 39051 # this is for controlling tor service
+
+# HashedControlPassword 16:94D87DAEACD5274060844DAD7AAC00239BBA59C61455407034007C435F
+
+    sudo service tor restart
+
+```
+
+```
+git clone https://github.com/legalizemath/tor-lnurl-lightningaddress.git
+cd tor-lnurl-lightningaddress
+npm install
+```
+
+edit server.js to set the control port and password for control port, example just uses "password" and corresponding hash
+
+run via
+```
+npm link balanceofsatoshis
+node server.js
+```
+
+# Manually connecting to tor controller via telnet
+
+```sh
+# if local website/server listens at 0.0.0.0:7890, this is how you put it up on onion address (while telnet connection is active)
+
+# (for it to stay after disconnecting from telnet have to use Flag=Detached) and then later remove with DEL_ONION serviceId)
+
+    telnet 0.0.0.0 39051
+    AUTHENTICATE "password"
+    ADD_ONION NEW:BEST Port=80,0.0.0.0:7890
+
+# it will respond with serviceId, which is onion address without .onion
+
+# and PrivateKey which can be used to re-host @ identical serviceId later after you remove it via
+
+    ADD_ONION ED25519-V3:privatekey
+    
+```
