@@ -38,6 +38,8 @@ npm link balanceofsatoshis
 node server.js
 ```
 
+ctrl-c to stop both local server and onion hiddenservice
+
 # Manually connecting to tor controller via telnet
 
 ```sh
