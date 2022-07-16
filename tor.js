@@ -113,7 +113,7 @@ export const addOnion = async (socket, options) => {
     serviceId,
     keyType,
     privateKey,
-    hsPrivateKey: `${keyType}:${privateKey}`
+    hsPrivateKey: hsPrivateKey || `${keyType}:${privateKey}`
   }
 }
 
