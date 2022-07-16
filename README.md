@@ -29,7 +29,8 @@ cd tor-lnurl-lightningaddress
 npm install
 ```
 
-edit server.js to set the control port and password for control port, example just uses "password" and corresponding hash
+edit server.js to set the control port if different
+edit settings.json for password for control port, example just uses "password" and corresponding hash
 
 run via
 ```
