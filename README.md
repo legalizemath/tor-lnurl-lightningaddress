@@ -13,7 +13,7 @@ for speed just re-used my bos wrappers which means it needs globally installed b
 
     sudo mcedit /etc/tor/torrc # edit torrc file
 
-# add following lines
+# add following 2 lines:
 
 # ControlPort 39051 # this is for controlling tor service
 
@@ -30,6 +30,7 @@ npm install
 ```
 
 edit server.js to set the control port if different
+
 edit settings.json for password for control port, example just uses "password" and corresponding hash
 
 run via
