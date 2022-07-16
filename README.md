@@ -1,3 +1,5 @@
+for speed just re-used my bos wrappers which means it needs globally installed balanceofsatoshis for lnd (npm i -g balanceofsatoshis)
+
 ```sh
 # install tor if not yet, tor --version
 
