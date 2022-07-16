@@ -15,8 +15,6 @@ for speed just re-used my bos wrappers which means it needs globally installed b
 
 # add following lines
 
-# SocksPort 39050 # this is for browsing via tor as client
-
 # ControlPort 39051 # this is for controlling tor service
 
 # HashedControlPassword 16:94D87DAEACD5274060844DAD7AAC00239BBA59C61455407034007C435F
