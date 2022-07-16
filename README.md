@@ -44,9 +44,9 @@ ctrl-c to stop both local server and onion hiddenservice
 # Manually connecting to tor controller via telnet
 
 ```sh
-# if local website/server listens at 0.0.0.0:7890, this is how you put it up on onion address (while telnet connection is active)
+# If local website/server listens at 0.0.0.0:7890, this is how you put it up on onion address while telnet or socket connection is active
 
-# (for it to stay after disconnecting from telnet have to use Flag=Detached) and then later remove with DEL_ONION serviceId)
+# For it to stay after disconnecting from telnet have to use Flag=Detached and then later remove with DEL_ONION serviceId
 
     telnet 0.0.0.0 39051
     AUTHENTICATE "password"
