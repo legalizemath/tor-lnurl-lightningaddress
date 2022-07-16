@@ -14,7 +14,9 @@ export const addAttachedOnion = async ({
   // port for the onion service/address (80 http, 443 https)
   portForOnion = '80',
   // port for the thing that you want to show up for onion service/address
-  clearnetAddressAndPort = '0.0.0.0:3000'
+  clearnetAddressAndPort = '0.0.0.0:3000',
+  // optional hidden service private key to recreate same onion address again
+  hsPrivateKey = ''
 }) => {
   console.log({ torControlAddress, torControlPassword, portForOnion, clearnetAddressAndPort })
   // connect to tor control
@@ -30,9 +32,10 @@ export const addAttachedOnion = async ({
   const resAddOnion = await addOnion(socket, {
     // keyType: 'ED25519-V3', //'ED25519-V3' or 'BEST'
     // flags: 'Detach',
-    port: onionInputValues
+    port: onionInputValues,
+    hsPrivateKey
   })
-  fs.writeFileSync(`_${time()}.json`, JSON.stringify(resAddOnion, null, 2))
+  if (!hsPrivateKey) fs.writeFileSync(`_${resAddOnion.serviceId}.json`, JSON.stringify(resAddOnion, null, 2))
   console.log(`${time()} tor: ${JSON.stringify(resAddOnion, null, 2)}`)
 
   // list onions
@@ -58,18 +61,25 @@ export const addAttachedOnion = async ({
 // add onion service
 // https://github.com/torproject/torspec/blob/main/control-spec.txt#L1749
 export const addOnion = async (socket, options) => {
-  let { keyType, privateKey, flags, port } = options
+  let { keyType, privateKey, flags, port, hsPrivateKey } = options
 
   // always need keyType for provided privateKey
   if (privateKey && !keyType) {
     throw new Error('Set keyType when you provide privateKey')
   }
 
-  const keyArgument = keyType
-    ? privateKey
-      ? `${keyType}:${privateKey}` // use provided keyType and privateKey
-      : `NEW:${keyType}` // generate new private key of provided keyType
-    : 'NEW:BEST' // if keyType not provided, use 'BEST'
+  let keyArgument
+  if (hsPrivateKey) {
+    keyArgument = hsPrivateKey
+  } else {
+    if (keyType) {
+      keyArgument = privateKey
+        ? `${keyType}:${privateKey}` // use provided keyType and privateKey
+        : `NEW:${keyType}` // generate new private key of provided keyType
+    } else {
+      keyArgument = 'NEW:BEST' // if keyType not provided, use 'BEST'
+    }
+  }
 
   const flagsArgument = flags ? `Flags=${flags} ` : ''
   const portArgument = `Port=${port}`
@@ -102,7 +112,8 @@ export const addOnion = async (socket, options) => {
   return {
     serviceId,
     keyType,
-    privateKey
+    privateKey,
+    hsPrivateKey: `${keyType}:${privateKey}`
   }
 }
 
