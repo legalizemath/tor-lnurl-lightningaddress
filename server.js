@@ -65,7 +65,7 @@ const run = async () => {
   <br>
 `
 
-  console.log(infoText.replace(/<br>/g, ''))
+  console.log(`${time()}`, infoText.replace(/<br>/g, ''))
   console.log(await QRCode.toString(lnurlp, { type: 'terminal', small: true }))
 
   infoText += await QRCode.toString(lnurlp, { type: 'svg', margin: 4, scale: 1, width: 320 })
@@ -89,7 +89,7 @@ app.get([`/.wellknown/lnurlp/${USER_NAME}`, `/.wellknown/lnurlp/${USER_NAME}@*`]
   // const username = req.params.username // if :username used in get so anything works
   if (!lnd) return res.status(500).json({ status: 'ERROR', reason: 'LN node not ready yet. Try again later.' })
 
-  console.log(`\nget request received for /.wellknown/lnurlp/${USER_NAME}\n`)
+  console.log(`\n${time()} get request received for /.wellknown/lnurlp/${USER_NAME}\n`)
 
   const callback = `http://${req.hostname}/.wellknown/lnurlp/${USER_NAME}`
   const identifier = `${USER_NAME}@${req.hostname}`
@@ -105,7 +105,7 @@ app.get([`/.wellknown/lnurlp/${USER_NAME}`, `/.wellknown/lnurlp/${USER_NAME}@*`]
 
   try {
     if (msat) {
-      console.log(`Received request for ${msat} msat payment`)
+      console.log(`${time()} Received request for ${msat} msat payment`)
       if (+msat > MAX_SENDABLE || +msat < MIN_SENDABLE) throw new Error(SENDABLE_ERROR)
 
       const invoice = await bos.lnService.createInvoice({
@@ -114,10 +114,10 @@ app.get([`/.wellknown/lnurlp/${USER_NAME}`, `/.wellknown/lnurlp/${USER_NAME}@*`]
         lnd
       })
 
-      console.log(`\nnew payment request: ${invoice.request}\n`)
+      console.log(`\n${time()} new payment request: ${invoice.request}\n`)
       // decoded request
       console.log(
-        'decoded payment request:',
+        `${time()} decoded payment request:`,
         bos.lnService.parsePaymentRequest({
           request: invoice.request
         })
@@ -132,7 +132,7 @@ app.get([`/.wellknown/lnurlp/${USER_NAME}`, `/.wellknown/lnurlp/${USER_NAME}@*`]
       })
     }
   } catch (e) {
-    console.log('error:', e.message)
+    console.log(`${time()} error:`, e.message)
     if (e.message === SENDABLE_ERROR) {
       res.status(500).json({ status: 'ERROR', reason: SENDABLE_ERROR })
       return null
@@ -144,7 +144,7 @@ app.get([`/.wellknown/lnurlp/${USER_NAME}`, `/.wellknown/lnurlp/${USER_NAME}@*`]
     return null
   }
 
-  console.log('Received amountless request')
+  console.log(`${time()} Received amountless request`)
 
   return res.status(200).json({
     status: 'OK',
@@ -161,18 +161,20 @@ app.disable('x-powered-by')
 
 // root access
 app.get('/', async (req, res) => {
-  console.log("\nget request received for '/'\n")
+  console.log(`\n${time()} get request received for '/'\n`)
   // console.log(req)
 
   res.send(infoText)
 })
 
 app.listen(LOCAL_SERVER_PORT, LOCAL_SERVER_ADDRESS, () => {
-  console.log(`local server running at ${LOCAL_SERVER_ADDRESS}:${LOCAL_SERVER_PORT}`)
+  console.log(`${time()} local server running at ${LOCAL_SERVER_ADDRESS}:${LOCAL_SERVER_PORT}`)
 })
 
 app.on('error', err => {
-  console.log('local server error', err)
+  console.log(`${time()} local server error`, err)
 })
+
+const time = timestamp => (timestamp !== undefined ? new Date(timestamp) : new Date()).toISOString()
 
 run()
