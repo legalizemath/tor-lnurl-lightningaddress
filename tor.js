@@ -58,6 +58,80 @@ export const addAttachedOnion = async ({
   }
 }
 
+export const addDetachedOnion = async ({
+  // connecting to control set in torrc settings like ControlPort 10.21.21.11:29051 or localhost:9051
+  torControlAddress = '0.0.0.0:9051',
+  // control password to match torrc setting hash like
+  // HashedControlPassword 16:6C76EEF0EA80542E60FBFCD0019B51C3074F0B28EED866FDF3F22CAEB3
+  torControlPassword = '',
+  // port for the onion service/address (80 http, 443 https)
+  portForOnion = '80',
+  // port for the thing that you want to show up for onion service/address
+  clearnetAddressAndPort = '0.0.0.0:3000',
+  // optional hidden service private key to recreate same onion address again
+  hsPrivateKey = '',
+  // optional hs onion address w/o .onion corresponding to hs private key provided
+  serviceId = ''
+}) => {
+  console.log({ torControlAddress, torControlPassword, portForOnion, clearnetAddressAndPort })
+  // connect to tor control
+  const socket = await connect(torControlAddress)
+
+  // authenticacte tor control
+  const resAuth = await authenticate(socket, torControlPassword)
+  console.log(`${time()} tor: ${resAuth}`)
+
+  // list detached hidden services and attempt to remove if any found
+  // https://github.com/torproject/torspec/blob/main/control-spec.txt#L1116
+  const resList = await getInfo(socket, 'onions/detached')
+  console.log(`${time()} tor: ${resList}`)
+  if (serviceId) {
+    // if I know which serviceId to remove just do that one
+    const delAttempt = await sendCommand(socket, `DEL_ONION ${serviceId}`)
+    console.log(`${time()} tor: DEL_ONION ${serviceId}: ${delAttempt}`)
+  }
+  // else {
+  //   // otherwise try removing all detached onions (risky if more than 1)
+  //   for (const line of resList.split('\n')) {
+  //     if (line.startsWith('250-onions/detached=')) {
+  //       if (line.length > 20) {
+  //         const dhs = line.slice(20)
+  //         try {
+  //           const delAttempt = await sendCommand(socket, `DEL_ONION ${dhs}`)
+  //           console.log(`${time()} tor: DEL_ONION ${dhs}: ${delAttempt}`)
+  //         } catch (e) {}
+  //       }
+  //     }
+  //   }
+  // }
+
+  // add onion address
+  console.log('add_onion: new')
+  const onionInputValues = `${portForOnion},${clearnetAddressAndPort}`
+  const resAddOnion = await addOnion(socket, {
+    // keyType: 'ED25519-V3', //'ED25519-V3' or 'BEST'
+    flags: 'Detach',
+    port: onionInputValues,
+    hsPrivateKey
+  })
+  fs.writeFileSync(`_${resAddOnion.serviceId}.json`, JSON.stringify(resAddOnion, null, 2))
+  console.log(`${time()} tor: ${JSON.stringify(resAddOnion, null, 2)}`)
+
+  // list onions
+  // https://github.com/torproject/torspec/blob/main/control-spec.txt#L1116
+  const resList2 = await getInfo(socket, 'onions/detached')
+  console.log(`${time()} tor: ${resList2}`)
+
+  // close connection
+  console.log(`${time()} socket.destroy()`)
+  socket.destroy()
+
+  return {
+    ...resAddOnion,
+    socket
+  }
+}
+
 // add onion service
 // https://github.com/torproject/torspec/blob/main/control-spec.txt#L1749
 export const addOnion = async (socket, options) => {
