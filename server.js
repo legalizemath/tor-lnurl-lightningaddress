@@ -48,16 +48,16 @@ const run = async () => {
   infoText = `
   msats max sendable: ${MAX_SENDABLE}<br>
   msats min sendable: ${MIN_SENDABLE}<br>
-
-  resources available at: <br><br>
-
-  homepage: ${url_root}
-
-  url: ${lnurl_utf8} <br><br>
-
+  <br>
+  resources available at: <br>
+  <br>
+  homepage: ${url_root}<br>
+  <br>
+  url: ${lnurl_utf8} <br>
+  <br>
   lnurlp: ${lnurlp} <br>
-    (works on SWB) <br><br>
-
+    (works on SWB) <br>
+  <br>
   lightningAddress: ${lightningAddress} <br>
     (doesn't work anywhere yet) <br><br>
 `
