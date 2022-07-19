@@ -1,11 +1,12 @@
-// https://github.com/mefatbear/lightning-address-nodejs/blob/master/src/server.ts
-
 import express from 'express'
 import crypto from 'crypto'
 import bos from './bos.js'
 import fs from 'fs'
 import { bech32 } from 'balanceofsatoshis/node_modules/bech32/dist/index.js'
-import { addAttachedOnion } from './tor.js'
+import {
+  // addAttachedOnion,
+  addDetachedOnion
+} from './tor.js'
 import QRCode from 'qrcode'
 
 const app = express()
@@ -19,7 +20,7 @@ const MAX_SENDABLE = 21e5 * 1e3 // max msats can send
 const MIN_SENDABLE = 1e3 // min msats can send
 
 // how to access tor service controller and which port to use for new .onion
-const { controlPassword, hsPrivateKey } = JSON.parse(fs.readFileSync('./settings.json'))
+const { controlPassword, hsPrivateKey, serviceId } = JSON.parse(fs.readFileSync('./settings.json'))
 const ONION_CONTROL_ADDRESS = '0.0.0.0:39051' // your tor service control port
 const ONION_PORT = '80' // port for .onion:port address outsiders will use
 
@@ -32,12 +33,14 @@ const run = async () => {
   lnd = await bos.initializeAuth()
 
   // create onion hs
-  const torRes = await addAttachedOnion({
+  // const torRes = await addAttachedOnion({
+  const torRes = await addDetachedOnion({
     torControlAddress: ONION_CONTROL_ADDRESS,
     torControlPassword: controlPassword,
     portForOnion: ONION_PORT,
     clearnetAddressAndPort: `${LOCAL_SERVER_ADDRESS}:${LOCAL_SERVER_PORT}`,
-    hsPrivateKey // if this was available in settings.json, it will use it
+    hsPrivateKey, // if known, will reuse hidden service onion key to get same onion address
+    serviceId // if known, corresponds to hsPrivateKey
   })
 
   const url_root = `${torRes.serviceId}.onion`
@@ -74,8 +77,8 @@ const run = async () => {
   // leaking tor hidden service private key can let anyone else generate your onion address
   const settingsBackup = {
     controlPassword,
+    serviceId: torRes.serviceId,
     hsPrivateKey: torRes.hsPrivateKey,
-    url_root: url_root,
     lnurl_utf8: lnurl_utf8,
     lnurlp: lnurlp
   }
@@ -178,3 +181,5 @@ app.on('error', err => {
 const time = timestamp => (timestamp !== undefined ? new Date(timestamp) : new Date()).toISOString()
 
 run()
+
+// used for reference https://github.com/mefatbear/lightning-address-nodejs/blob/master/src/server.ts
