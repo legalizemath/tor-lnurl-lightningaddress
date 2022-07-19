@@ -9,9 +9,9 @@ for speed just re-used my bos wrappers which means it needs [globally installed 
 
 # password hash looks like 16:94D87DAEACD5274060844DAD7AAC00239BBA59C61455407034007C435F
 
-# edit tor settings file, replace mcedit w/ whatever editor
+# edit tor settings file (ctrl-x close, ctrl-y yes to save changes, enter to confirm file path), replace nano w/ whatever editor
 
-    sudo mcedit /etc/tor/torrc # edit torrc file
+    sudo nano /etc/tor/torrc # edit torrc file
 
 # add following 2 lines:
 
