@@ -24,8 +24,8 @@ for speed just re-used my bos wrappers which means it needs [globally installed 
 ```
 
 ```
-git clone https://github.com/legalizemath/tor-lnurl-lightningaddress.git
-cd tor-lnurl-lightningaddress
+git clone https://github.com/legalizemath/tor-lnurl-lightningaddress.git torlnurl
+cd torlnurl
 npm install
 ```
 
@@ -37,6 +37,7 @@ run via
 ```
 npm link balanceofsatoshis
 node server.js
+# or shortcut via: npm run start
 ```
 
 ctrl-c to stop both local server and onion hiddenservice
