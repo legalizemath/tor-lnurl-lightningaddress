@@ -5,10 +5,11 @@
   "main": "server.js",
   "type": "module",
   "scripts": {
-    "start": "npm link balanceofsatoshis && node --optimize_for_size --max_old_space_size=300 server.js"
+    "start": "npm link balanceofsatoshis && node --optimize_for_size --max_old_space_size=100 server.js"
   },
   "dependencies": {
-    "express": "^4.18.1"
+    "express": "^4.18.1",
+    "qrcode": "^1.5.1"
   },
   "author": "",
   "license": "MIT license"
