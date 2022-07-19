@@ -35,7 +35,7 @@ export const addAttachedOnion = async ({
     port: onionInputValues,
     hsPrivateKey
   })
-  if (!hsPrivateKey) fs.writeFileSync(`_${resAddOnion.serviceId}.json`, JSON.stringify(resAddOnion, null, 2))
+  fs.writeFileSync(`_${resAddOnion.serviceId}.json`, JSON.stringify(resAddOnion, null, 2))
   console.log(`${time()} tor: ${JSON.stringify(resAddOnion, null, 2)}`)
 
   // list onions
