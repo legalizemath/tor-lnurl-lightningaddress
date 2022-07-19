@@ -51,15 +51,16 @@ const run = async () => {
   <br>
   resources available at: <br>
   <br>
-  homepage: ${url_root}<br>
+  homepage: http://${url_root}<br>
   <br>
   url: ${lnurl_utf8} <br>
   <br>
-  lnurlp: ${lnurlp} <br>
-    (works on SWB) <br>
-  <br>
   lightningAddress: ${lightningAddress} <br>
-    (doesn't work anywhere yet) <br><br>
+    (doesn't work anywhere yet) <br>
+  <br>
+  lnurlp: ${lnurlp} <br>
+    (works w/ SWB, Bluewallet) <br>
+  <br>
 `
 
   console.log(infoText.replace(/<br>/g, ''))
