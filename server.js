@@ -59,7 +59,7 @@ const run = async () => {
     (doesn't work anywhere yet) <br>
   <br>
   lnurlp: ${lnurlp} <br>
-    (works w/ SWB, Bluewallet w/ built-in tor support)
+    (works w/ SWB, Bluewallet w/ built-in tor support) <br>
     (works w/ Blixt, Breez when running Orbot VPN mode w/ wallets added to Tor enabled apps) <br>
     (doesn't work with Phoenix, Muun, WoS yet) <br>
   <br>
