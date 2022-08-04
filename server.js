@@ -1,13 +1,15 @@
 import express from 'express'
+import QRCode from 'qrcode'
+import fs from 'fs'
+
 import crypto from 'crypto'
 import bos from './bos.js'
-import fs from 'fs'
+
 import { bech32 } from 'balanceofsatoshis/node_modules/bech32/dist/index.js'
 import {
   // addAttachedOnion,
   addDetachedOnion
 } from './tor.js'
-import QRCode from 'qrcode'
 
 const app = express()
 
@@ -36,7 +38,7 @@ const handleGetLnurlp = async (req, res) => {
   // const username = req.params.username // if :username used in get so anything works
   if (!lnd) return res.status(500).json({ status: 'ERROR', reason: 'LN node not ready yet. Try again later.' })
 
-  log(`responding to '.well-known/lnurlp/${USER_NAME}'`)
+  log(`responding to "${req.url}"`)
 
   const callback = `http://${req.hostname}/.well-known/lnurlp/${USER_NAME}`
   const identifier = `${USER_NAME}@${req.hostname}`
@@ -105,7 +107,7 @@ const handleGetLnurlp = async (req, res) => {
 }
 
 const handleHomepage = async (req, res) => {
-  log(`\n${time()} responding to '/'`)
+  log(`responding to "${req.url}"`)
   res.send(infoText)
 }
 
@@ -136,6 +138,7 @@ app.get('/', handleHomepage)
 // fallback
 app.get('*', async (req, res) => {
   log(`fallback responding to ${req.url}`)
+  if (req.method === 'OPTIONS') res.set({ 'Access-Control-Allow-Methods': 'GET' }).status(200).end()
   return res.status(404).end()
 })
 
@@ -179,10 +182,10 @@ const setupTorAddress = async () => {
   <br>
   url: ${lnurl_utf8} <br>
   <br>
-  lightningAddress: ${lightningAddress} <br>
-    (doesn't work anywhere yet) <br>
+  lightning-address: ${lightningAddress} <br>
+    (works with SBW) <br>
   <br>
-  lnurlp: ${lnurlp} <br>
+  lnurlp/lnurl-pay: ${lnurlp} <br>
     (works w/ SWB, Bluewallet w/ built-in tor support) <br>
     (works w/ Blixt, Breez when running Orbot VPN mode w/ wallets added to Tor enabled apps) <br>
     (doesn't work with Phoenix, Muun, WoS yet) <br>
@@ -191,8 +194,9 @@ const setupTorAddress = async () => {
 
   log(infoText.replace(/<br>/g, ''))
   // QR for terminal and svg on homepage have to be different to render right
-  log('LNURL qrcode for testing:\n', await QRCode.toString(lnurlp, { type: 'terminal', small: true }))
-  infoText += await QRCode.toString(lnurlp, { type: 'svg', margin: 4, scale: 1, width: 320 })
+  log('LNURL qrcode for testing:')
+  console.log(await QRCode.toString(lnurlp, { type: 'terminal', small: true }))
+  infoText += 'LNURLP QRcode:<br>' + (await QRCode.toString(lnurlp, { type: 'svg', margin: 4, scale: 1, width: 320 }))
 
   // backup private key into settings.json so it's re-used next run
   // leaking tor hidden service private key can let anyone else generate your onion address
