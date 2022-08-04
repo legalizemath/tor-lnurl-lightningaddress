@@ -183,7 +183,7 @@ const setupTorAddress = async () => {
   url: ${lnurl_utf8} <br>
   <br>
   lightning-address: ${lightningAddress} <br>
-    (works with SBW) <br>
+    (works with SBW, Bluewallet) <br>
   <br>
   lnurlp/lnurl-pay: ${lnurlp} <br>
     (works w/ SWB, Bluewallet w/ built-in tor support) <br>
