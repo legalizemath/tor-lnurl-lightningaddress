@@ -11,6 +11,9 @@ import QRCode from 'qrcode'
 
 const app = express()
 
+const log = (...args) => console.log(...[time().replace(/[TZ]/g, ' '), ...args])
+const logn = (...args) => log(...['\n', ...args])
+
 // where to setup local network web server
 const LOCAL_SERVER_PORT = 7890
 const LOCAL_SERVER_ADDRESS = '0.0.0.0'
@@ -27,8 +30,126 @@ const ONION_PORT = '80' // port for .onion:port address outsiders will use
 let lnd // lnd auth goes here later for ln-service
 let infoText = 'My Bitcoin homepage!'
 
-// set up new tor .onion hiddenservice to forward to local webserver
-const run = async () => {
+// ---------- set up necessary request response handlers ----------
+
+const handleGetLnurlp = async (req, res) => {
+  // const username = req.params.username // if :username used in get so anything works
+  if (!lnd) return res.status(500).json({ status: 'ERROR', reason: 'LN node not ready yet. Try again later.' })
+
+  log(`responding to '.well-known/lnurlp/${USER_NAME}'`)
+
+  const callback = `http://${req.hostname}/.well-known/lnurlp/${USER_NAME}`
+  const identifier = `${USER_NAME}@${req.hostname}`
+
+  const metadata = [
+    ['text/identifier', identifier],
+    ['text/plain', TEXT_MESSAGE]
+  ]
+  const msat = req?.query?.amount
+
+  const hash = crypto.createHash('sha256').update(JSON.stringify(metadata)).digest('hex')
+  const SENDABLE_ERROR = `Amount ${msat} outside sendable msat range: ${MIN_SENDABLE}-${MAX_SENDABLE}`
+
+  try {
+    if (msat) {
+      log(`get request for ${msat} msat payment`)
+      if (+msat > MAX_SENDABLE || +msat < MIN_SENDABLE) throw new Error(SENDABLE_ERROR)
+
+      const invoice = await bos.lnService.createInvoice({
+        mtokens: String(msat),
+        description_hash: hash,
+        lnd
+      })
+
+      log(`new payment invoice generated: ${invoice.request}`)
+      // decoded request
+      log(
+        'decoded payment request:',
+        bos.lnService.parsePaymentRequest({
+          request: invoice.request
+        })
+      )
+
+      return res.status(200).json({
+        status: 'OK',
+        successAction: { tag: 'message', message: 'Thank You!' }, // shows up once payment succeeds
+        routes: [],
+        pr: invoice.request,
+        disposable: false
+      })
+    }
+  } catch (e) {
+    log('error:', e.message)
+    if (e.message === SENDABLE_ERROR) {
+      res.status(500).json({ status: 'ERROR', reason: SENDABLE_ERROR })
+      return null
+    }
+    // otherwise it's likely a problem with lnd auth so refreshing it
+    res.status(500).json({ status: 'ERROR', reason: 'Error generating invoice. Try again later.' })
+    lnd = undefined
+    lnd = await bos.initializeAuth()
+    return null
+  }
+
+  log('Received amountless request')
+
+  return res.status(200).json({
+    status: 'OK',
+    callback: callback,
+    tag: 'payRequest',
+    maxSendable: MAX_SENDABLE,
+    minSendable: MIN_SENDABLE,
+    metadata: JSON.stringify(metadata),
+    commentsAllowed: 160
+  })
+}
+
+const handleHomepage = async (req, res) => {
+  log(`\n${time()} responding to '/'`)
+  res.send(infoText)
+}
+
+// ---------- set up local webserver ----------
+
+app.disable('x-powered-by')
+// on every request
+app.use((req, res, next) => {
+  logn(`received ${req.method} request for ${req.hostname}${req.url} with following query:`, req.query)
+  // signal CORS allowed
+  res.set({
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET,OPTIONS,HEAD',
+    'Access-Control-Allow-Headers':
+      'Host,User-Agent,Accept,Accept-Language,Accept-Encoding,Content-Type,Origin,Connection,sec-fetch-dest,sec-fetch-mode,sec-fetch-site'
+  })
+  // log('request headers:', req.headers)
+  // log('response headers', res.getHeaders())
+  next()
+})
+
+// lnurl pay path for lightning address
+app.get([`/.well-known/lnurlp/${USER_NAME}`, `/.well-known/lnurlp/${USER_NAME}*`], handleGetLnurlp)
+
+// root access
+app.get('/', handleHomepage)
+
+// fallback
+app.get('*', async (req, res) => {
+  log(`fallback responding to ${req.url}`)
+  return res.status(404).end()
+})
+
+app.listen(LOCAL_SERVER_PORT, LOCAL_SERVER_ADDRESS, () => {
+  log(`local server running at ${LOCAL_SERVER_ADDRESS}:${LOCAL_SERVER_PORT}`)
+})
+
+app.on('error', err => {
+  log('local server error', err)
+})
+
+// ---------- set up a tor .onion hiddenservice (onion address) to forward to our local webserver ----------
+
+const setupTorAddress = async () => {
   // get lnd authorization for later
   lnd = await bos.initializeAuth()
 
@@ -44,7 +165,7 @@ const run = async () => {
   })
 
   const url_root = `${torRes.serviceId}.onion`
-  const lnurl_utf8 = `http://${url_root}/.wellknown/lnurlp/${USER_NAME}`
+  const lnurl_utf8 = `http://${url_root}/.well-known/lnurlp/${USER_NAME}`
   const lnurlp = bech32.encode('lnurl', bech32.toWords(Buffer.from(lnurl_utf8, 'utf8')), 2000).toUpperCase()
   const lightningAddress = `${USER_NAME}@${url_root}`
 
@@ -68,9 +189,9 @@ const run = async () => {
   <br>
 `
 
-  console.log(`${time()}`, infoText.replace(/<br>/g, ''))
-  console.log(await QRCode.toString(lnurlp, { type: 'terminal', small: true }))
-
+  log(infoText.replace(/<br>/g, ''))
+  // QR for terminal and svg on homepage have to be different to render right
+  log('LNURL qrcode for testing:\n', await QRCode.toString(lnurlp, { type: 'terminal', small: true }))
   infoText += await QRCode.toString(lnurlp, { type: 'svg', margin: 4, scale: 1, width: 320 })
 
   // backup private key into settings.json so it's re-used next run
@@ -85,101 +206,8 @@ const run = async () => {
   fs.writeFileSync('./settings.json', JSON.stringify(settingsBackup, null, 2))
 }
 
-// ---------- set up local webserver ----------
-
-// lnurl pay path for lightning address
-app.get([`/.wellknown/lnurlp/${USER_NAME}`, `/.wellknown/lnurlp/${USER_NAME}@*`], async (req, res) => {
-  // const username = req.params.username // if :username used in get so anything works
-  if (!lnd) return res.status(500).json({ status: 'ERROR', reason: 'LN node not ready yet. Try again later.' })
-
-  console.log(`\n${time()} get request received for /.wellknown/lnurlp/${USER_NAME}\n`)
-
-  const callback = `http://${req.hostname}/.wellknown/lnurlp/${USER_NAME}`
-  const identifier = `${USER_NAME}@${req.hostname}`
-
-  const metadata = [
-    ['text/identifier', identifier],
-    ['text/plain', TEXT_MESSAGE]
-  ]
-  const msat = req?.query?.amount
-
-  const hash = crypto.createHash('sha256').update(JSON.stringify(metadata)).digest('hex')
-  const SENDABLE_ERROR = `Amount ${msat} outside sendable msat range: ${MIN_SENDABLE}-${MAX_SENDABLE}`
-
-  try {
-    if (msat) {
-      console.log(`${time()} Received request for ${msat} msat payment`)
-      if (+msat > MAX_SENDABLE || +msat < MIN_SENDABLE) throw new Error(SENDABLE_ERROR)
-
-      const invoice = await bos.lnService.createInvoice({
-        mtokens: String(msat),
-        description_hash: hash,
-        lnd
-      })
-
-      console.log(`\n${time()} new payment request: ${invoice.request}\n`)
-      // decoded request
-      console.log(
-        `${time()} decoded payment request:`,
-        bos.lnService.parsePaymentRequest({
-          request: invoice.request
-        })
-      )
-
-      return res.status(200).json({
-        status: 'OK',
-        successAction: { tag: 'message', message: 'Thank You!' },
-        routes: [],
-        pr: invoice.request,
-        disposable: false
-      })
-    }
-  } catch (e) {
-    console.log(`${time()} error:`, e.message)
-    if (e.message === SENDABLE_ERROR) {
-      res.status(500).json({ status: 'ERROR', reason: SENDABLE_ERROR })
-      return null
-    }
-    // otherwise it's likely a problem with lnd auth so refreshing it
-    res.status(500).json({ status: 'ERROR', reason: 'Error generating invoice. Try again later.' })
-    lnd = undefined
-    lnd = await bos.initializeAuth()
-    return null
-  }
-
-  console.log(`${time()} Received amountless request`)
-
-  return res.status(200).json({
-    status: 'OK',
-    callback: callback,
-    tag: 'payRequest',
-    maxSendable: MAX_SENDABLE,
-    minSendable: MIN_SENDABLE,
-    metadata: JSON.stringify(metadata),
-    commentsAllowed: 160
-  })
-})
-
-app.disable('x-powered-by')
-
-// root access
-app.get('/', async (req, res) => {
-  console.log(`\n${time()} get request received for '/'\n`)
-  // console.log(req)
-
-  res.send(infoText)
-})
-
-app.listen(LOCAL_SERVER_PORT, LOCAL_SERVER_ADDRESS, () => {
-  console.log(`${time()} local server running at ${LOCAL_SERVER_ADDRESS}:${LOCAL_SERVER_PORT}`)
-})
-
-app.on('error', err => {
-  console.log(`${time()} local server error`, err)
-})
-
 const time = timestamp => (timestamp !== undefined ? new Date(timestamp) : new Date()).toISOString()
 
-run()
+setupTorAddress()
 
 // used for reference https://github.com/mefatbear/lightning-address-nodejs/blob/master/src/server.ts
