@@ -1,7 +1,7 @@
 # WHAT IS THIS?
 
 server.js creates local server + static onion address accessible through tor to use for lnurlp or lightning addresses.
-it includes CORS headers so it can be fetched from random pages like https://codepen.io/legalizemath/full/eYymQKb
+it includes CORS headers so it can be fetched from random pages like https://codepen.io/legalizemath/full/eYymQKb (from tor browser)
 
 what it creates for me for example:
 
