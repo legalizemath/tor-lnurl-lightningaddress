@@ -2,7 +2,7 @@
 import { Socket } from 'net'
 import fs from 'fs'
 
-// creates detached onion hidden service
+// creates attached onion hidden service
 // returns { serviceId, keyType, privateKey, socket }
 // socket.destroy() will close the connection
 export const addAttachedOnion = async ({
@@ -18,16 +18,16 @@ export const addAttachedOnion = async ({
   // optional hidden service private key to recreate same onion address again
   hsPrivateKey = ''
 }) => {
-  console.log({ torControlAddress, torControlPassword, portForOnion, clearnetAddressAndPort })
+  log({ torControlAddress, torControlPassword, portForOnion, clearnetAddressAndPort })
   // connect to tor control
   const socket = await connect(torControlAddress)
 
   // authenticacte tor control
   const resAuth = await authenticate(socket, torControlPassword)
-  console.log(`${time()} tor: ${resAuth}`)
+  log(`${resAuth}`)
 
   // add onion address
-  console.log('add_onion: new')
+  log('add_onion: new')
   const onionInputValues = `${portForOnion},${clearnetAddressAndPort}`
   const resAddOnion = await addOnion(socket, {
     // keyType: 'ED25519-V3', //'ED25519-V3' or 'BEST'
@@ -36,20 +36,20 @@ export const addAttachedOnion = async ({
     hsPrivateKey
   })
   fs.writeFileSync(`_${resAddOnion.serviceId}.json`, JSON.stringify(resAddOnion, null, 2))
-  console.log(`${time()} tor: ${JSON.stringify(resAddOnion, null, 2)}`)
+  log(`${JSON.stringify(resAddOnion, null, 2)}`)
 
   // list onions
   // https://github.com/torproject/torspec/blob/main/control-spec.txt#L1116
   const resList2 = await getInfo(socket, 'onions/current')
-  console.log(`${time()} tor: ${resList2}`)
+  log(`${resList2}`)
   const resList3 = await getInfo(socket, 'onions/detached')
-  console.log(`${time()} tor: ${resList3}`)
+  log(`${resList3}`)
 
   // deleting an onion service
-  // console.log(await sendCommand(socket, 'DEL_ONION lgpibnn7w2tvrwhahprwrqzm7gxk5y3ayux2xp5gp6uxvo6hvuk6hkid'))
+  // log(await sendCommand(socket, 'DEL_ONION lgpibnn7w2tvrwhahprwrqzm7gxk5y3ayux2xp5gp6uxvo6hvuk6hkid'))
 
   // close connection
-  // console.log(`${time()} socket.destroy()`)
+  // log(`socket.destroy()`)
   // socket.destroy()
 
   return {
@@ -73,22 +73,26 @@ export const addDetachedOnion = async ({
   // optional hs onion address w/o .onion corresponding to hs private key provided
   serviceId = ''
 }) => {
-  console.log({ torControlAddress, torControlPassword, portForOnion, clearnetAddressAndPort })
+  log({ torControlAddress, torControlPassword, portForOnion, clearnetAddressAndPort })
   // connect to tor control
   const socket = await connect(torControlAddress)
 
   // authenticacte tor control
   const resAuth = await authenticate(socket, torControlPassword)
-  console.log(`${time()} tor: ${resAuth}`)
+  log(`${resAuth}`)
 
   // list detached hidden services and attempt to remove if any found
   // https://github.com/torproject/torspec/blob/main/control-spec.txt#L1116
   const resList = await getInfo(socket, 'onions/detached')
-  console.log(`${time()} tor: ${resList}`)
+  // log(`listing existing detached onions: ${resList}`)
   if (serviceId) {
     // if I know which serviceId to remove just do that one
-    const delAttempt = await sendCommand(socket, `DEL_ONION ${serviceId}`)
-    console.log(`${time()} tor: DEL_ONION ${serviceId}: ${delAttempt}`)
+    try {
+      const delAttempt = await sendCommand(socket, `DEL_ONION ${serviceId}`)
+      log(`attempt to remove previous ${serviceId}: ${delAttempt}`)
+    } catch (e) {
+      log(`attempt to remove previous ${serviceId}: failed (ok if first time creating it)`, e)
+    }
   }
   // else {
   //   // otherwise try removing all detached onions (risky if more than 1)
@@ -98,15 +102,18 @@ export const addDetachedOnion = async ({
   //         const dhs = line.slice(20)
   //         try {
   //           const delAttempt = await sendCommand(socket, `DEL_ONION ${dhs}`)
-  //           console.log(`${time()} tor: DEL_ONION ${dhs}: ${delAttempt}`)
+  //           log(`DEL_ONION ${dhs}: ${delAttempt}`)
   //         } catch (e) {}
   //       }
   //     }
   //   }
   // }
 
+  // helps to wait 1 sec here
+  await new Promise(r => setTimeout(r, 1000))
+
   // add onion address
-  console.log('add_onion: new')
+  log('add_onion: new')
   const onionInputValues = `${portForOnion},${clearnetAddressAndPort}`
   const resAddOnion = await addOnion(socket, {
     // keyType: 'ED25519-V3', //'ED25519-V3' or 'BEST'
@@ -115,15 +122,25 @@ export const addDetachedOnion = async ({
     hsPrivateKey
   })
   fs.writeFileSync(`_${resAddOnion.serviceId}.json`, JSON.stringify(resAddOnion, null, 2))
-  console.log(`${time()} tor: ${JSON.stringify(resAddOnion, null, 2)}`)
+  log(`${JSON.stringify(resAddOnion, null, 2)}`)
 
-  // list onions
+  // helps to wait 1 sec here
+  await new Promise(r => setTimeout(r, 1000))
+
+  // list detached onions again (seen adding detached onion fail to work)
   // https://github.com/torproject/torspec/blob/main/control-spec.txt#L1116
   const resList2 = await getInfo(socket, 'onions/detached')
-  console.log(`${time()} tor: ${resList2}`)
+  log(`re-listing existing detached onions: ${resList2}`)
+  // make sure it was added
+  let onionFound = false
+  for (const line of resList.split('\n')) {
+    if (line.includes(resAddOnion.serviceId)) onionFound = true
+  }
+  if (!onionFound) throw new Error('failed to create detached onion, try "sudo service tor restart"')
+  else log('our detached onion successfully added')
 
   // close connection
-  console.log(`${time()} socket.destroy()`)
+  log('socket.destroy()')
   socket.destroy()
 
   return {
@@ -158,9 +175,9 @@ export const addOnion = async (socket, options) => {
   const flagsArgument = flags ? `Flags=${flags} ` : ''
   const portArgument = `Port=${port}`
   const command = `ADD_ONION ${keyArgument} ${flagsArgument}${portArgument}`
-  console.log(`${time()} command: ${command}\n`)
+  log(`command: ${command}\n`)
   const result = await sendCommand(socket, command)
-  console.log(`${time()} tor: ${result}`)
+  log(`${result}`)
 
   // parse through returned text
   const lines = result.split('\r\n')
@@ -177,7 +194,7 @@ export const addOnion = async (socket, options) => {
     privateKey = privateKeyResult[1]
   }
 
-  //   console.log(`${time()} new onion service information to save
+  //   log(`new onion service information to save
   // serviceId: ${serviceId}
   // keyType: ${keyType}
   // privateKey: ${privateKey}
@@ -197,13 +214,13 @@ export const connect = torControlAddress => {
   const [host, port] = torControlAddress.split(':')
   return new Promise(resolve => {
     const socket = new Socket()
-    console.log(`${time()} connecting to ${host}:${port} socket`)
-    socket.on('ready', () => console.log(`${time()} socket: ready`))
-    socket.on('timeout', () => console.log(`${time()} socket: timeout`))
-    socket.on('error', err => console.log(`${time()} socket: error`, err))
-    socket.on('end', () => console.log(`${time()} socket: end`))
-    socket.on('close', () => console.log(`${time()} socket: close`))
-    socket.on('ADDRMAP', v => console.log(`${time()} socket: ADDMAP:`, v))
+    log(`connecting to ${host}:${port} socket`)
+    socket.on('ready', () => log('socket: ready'))
+    socket.on('timeout', () => log('socket: timeout'))
+    socket.on('error', err => log('socket: error', err))
+    socket.on('end', () => log('socket: end'))
+    socket.on('close', () => log('socket: close'))
+    socket.on('ADDRMAP', v => log('socket: ADDMAP:', v))
 
     socket.connect(+port, host, () => resolve(socket))
   })
@@ -226,16 +243,17 @@ export const sendCommand = (socket, command) => {
 
 // submit password to tor control
 export const authenticate = (socket, password) => {
-  console.log(`AUTHENTICATE "${'*'.repeat(password.length)}"`)
+  log(`AUTHENTICATE "${'*'.repeat(password.length)}"`)
   return sendCommand(socket, `AUTHENTICATE "${password}"`)
 }
 
 // submit GETINFO [keyword] command to tor control
 export const getInfo = (socket, keyword) => {
-  console.log(`GETINFO ${keyword}`)
+  log(`GETINFO ${keyword}`)
   return sendCommand(socket, `GETINFO ${keyword}`)
 }
 
+const log = (...args) => console.log(...[time().replace(/[TZ]/g, ' '), 'tor:', ...args])
 const time = timestamp => (timestamp !== undefined ? new Date(timestamp) : new Date()).toISOString()
 
 /*
