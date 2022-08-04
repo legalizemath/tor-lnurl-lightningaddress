@@ -8,7 +8,7 @@ what it creates for me for example:
 * lightning address: btc@arihg6tpnvs7qsjtklrybolhcdpjkwj5w4jaacx7flc6vzpiuy42puid.onion
 * lnurl-pay code: LNURL1DP68GUP69UHKZUNFDPNNVARSDEM8XDM3WD48G6MVWFUKYMMVDP3KGUR2DDMK5DTHX34XZCTR0QMKVMRRXEM85URFW4UNGVNSW45KGTN0DE5K7M309EMK2MRV944KUMMHDCHKCMN4WFK8QTMZW33SGXWMMV 
 * lnurl: http://arihg6tpnvs7qsjtklrybolhcdpjkwj5w4jaacx7flc6vzpiuy42puid.onion/.well-known/lnurlp/btc
-* static homepage: http://arihg6tpnvs7qsjtklrybolhcdpjkwj5w4jaacx7flc6vzpiuy42puid.onion/
+* static homepage: http://arihg6tpnvs7qsjtklrybolhcdpjkwj5w4jaacx7flc6vzpiuy42puid.onion
 
 
 # INFO
