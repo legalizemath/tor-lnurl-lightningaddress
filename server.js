@@ -124,6 +124,7 @@ app.use((req, res, next) => {
     'Access-Control-Allow-Headers':
       'Host,User-Agent,Accept,Accept-Language,Accept-Encoding,Content-Type,Origin,Connection,sec-fetch-dest,sec-fetch-mode,sec-fetch-site'
   })
+  if (req.method === 'OPTIONS') return res.set({ 'Access-Control-Allow-Methods': 'GET' }).status(200).end()
   // log('request headers:', req.headers)
   // log('response headers', res.getHeaders())
   next()
@@ -138,7 +139,6 @@ app.get('/', handleHomepage)
 // fallback
 app.get('*', async (req, res) => {
   log(`fallback responding to ${req.url}`)
-  if (req.method === 'OPTIONS') res.set({ 'Access-Control-Allow-Methods': 'GET' }).status(200).end()
   return res.status(404).end()
 })
 
