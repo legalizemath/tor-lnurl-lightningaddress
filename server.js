@@ -20,7 +20,7 @@ const logn = (...args) => log(...['\n', ...args])
 const LOCAL_SERVER_PORT = 7890
 const LOCAL_SERVER_ADDRESS = '0.0.0.0'
 const USER_NAME = 'btc' // give username to use for lnurl and lightning address
-const TEXT_MESSAGE = `Send sats. ${USER_NAME}` // text to show senders
+const TEXT_MESSAGE = 'Send sats O.o' // text to show senders
 const MAX_SENDABLE = 21e5 * 1e3 // max msats can send
 const MIN_SENDABLE = 1e3 // min msats can send
 
@@ -36,7 +36,7 @@ let infoText = 'My Bitcoin homepage!'
 
 const handleGetLnurlp = async (req, res) => {
   // const username = req.params.username // if :username used in get so anything works
-  if (!lnd) return res.status(500).json({ status: 'ERROR', reason: 'LN node not ready yet. Try again later.' })
+  if (!lnd) return res.status(200).json({ status: 'ERROR', reason: 'LN node not ready yet. Try again later.' })
 
   log(`responding to "${req.url}"`)
 
@@ -83,11 +83,11 @@ const handleGetLnurlp = async (req, res) => {
   } catch (e) {
     log('error:', e.message)
     if (e.message === SENDABLE_ERROR) {
-      res.status(500).json({ status: 'ERROR', reason: SENDABLE_ERROR })
+      res.status(200).json({ status: 'ERROR', reason: SENDABLE_ERROR })
       return null
     }
     // otherwise it's likely a problem with lnd auth so refreshing it
-    res.status(500).json({ status: 'ERROR', reason: 'Error generating invoice. Try again later.' })
+    res.status(200).json({ status: 'ERROR', reason: 'Error generating invoice. Try again later.' })
     lnd = undefined
     lnd = await bos.initializeAuth()
     return null
