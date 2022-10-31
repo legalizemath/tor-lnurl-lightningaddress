@@ -28,7 +28,7 @@ for speed just re-used my bos wrappers which means it needs [globally installed 
 
     sudo nano /etc/tor/torrc # edit torrc file
 
-# add following 2 lines:
+# add following 2 lines (obviously replace hashed control password w/ output from tor --hash-password):
 
 # ControlPort 39051 # this is for controlling tor service
 
