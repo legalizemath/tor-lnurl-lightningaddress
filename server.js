@@ -48,11 +48,15 @@ const handleGetLnurlp = async (req, res) => {
     ['text/plain', TEXT_MESSAGE]
   ]
   const msat = req?.query?.amount
+  const comment = req?.query?.comment // lud12
 
   const hash = crypto.createHash('sha256').update(JSON.stringify(metadata)).digest('hex')
   const SENDABLE_ERROR = `Amount ${msat} outside sendable msat range: ${MIN_SENDABLE}-${MAX_SENDABLE}`
 
   try {
+    // payments either have amounts, so we issue an invoice if everything's ok
+    // or payments don't have amounts, so we give instructions for amounts
+
     if (msat) {
       log(`get request for ${msat} msat payment`)
       if (+msat > MAX_SENDABLE || +msat < MIN_SENDABLE) throw new Error(SENDABLE_ERROR)
@@ -64,7 +68,7 @@ const handleGetLnurlp = async (req, res) => {
       })
 
       log(`new payment invoice generated: ${invoice.request}`)
-      // decoded request
+      // decoded request for us to see
       log(
         'decoded payment request:',
         bos.lnService.parsePaymentRequest({
@@ -72,6 +76,10 @@ const handleGetLnurlp = async (req, res) => {
         })
       )
 
+      // print comment user left if any
+      if (comment) log(`comment found: ${comment}`)
+
+      // send back lud4 type lnurlp response w/ invoice request
       return res.status(200).json({
         status: 'OK',
         successAction: { tag: 'message', message: 'Thank You!' }, // shows up once payment succeeds
@@ -93,8 +101,10 @@ const handleGetLnurlp = async (req, res) => {
     return null
   }
 
-  log('Received amountless request')
+  // if (!msat)
+  log('get request w/o an amount')
 
+  // send back rules of this lnurlp (lud4)
   return res.status(200).json({
     status: 'OK',
     callback: callback,
@@ -102,7 +112,8 @@ const handleGetLnurlp = async (req, res) => {
     maxSendable: MAX_SENDABLE,
     minSendable: MIN_SENDABLE,
     metadata: JSON.stringify(metadata),
-    commentsAllowed: 160
+    // https://github.com/lnurl/luds/blob/luds/12.md
+    commentAllowed: 160
   })
 }
 
@@ -133,10 +144,10 @@ app.use((req, res, next) => {
 // lnurl pay path for lightning address
 app.get([`/.well-known/lnurlp/${USER_NAME}`, `/.well-known/lnurlp/${USER_NAME}*`], handleGetLnurlp)
 
-// root access
+// root access for "homepage"
 app.get('/', handleHomepage)
 
-// fallback
+// fallback "nothing found" if unspecified above path
 app.get('*', async (req, res) => {
   log(`fallback responding to ${req.url}`)
   return res.status(404).end()
